@@ -32,6 +32,7 @@ public class Ticker {
 	public void setPrice(String price) {
 		Price = price;
 	}
+
 	public static float getPrice() throws Exception {
 		String url = "https://www.btc123.com/api/getTicker?symbol=coinbasebtcusd";
 		HttpClient client = HttpClientBuilder.create().build();
@@ -46,15 +47,17 @@ public class Ticker {
 			builder.append(line);
 		}
 		JSONObject resultObject = new JSONObject(builder.toString());
-		float currentPrice = Float.parseFloat(resultObject.getJSONObject("datas").getJSONObject("ticker").getString("dollar"));
+		float currentPrice = Float
+				.parseFloat(resultObject.getJSONObject("datas").getJSONObject("ticker").getString("dollar"));
 		return currentPrice;
 	}
+
 	public String returnMsg() {
 
 		String returnMessage = null;
 		float tickPrice = Float.parseFloat(Price);
 		float currentPrice = 0;
-		//1. 先回复微信消息
+		// 1. 先回复微信消息
 		try {
 			currentPrice = Ticker.getPrice();
 		} catch (Exception e) {
@@ -63,21 +66,22 @@ public class Ticker {
 		if (tickPrice < currentPrice) {
 			returnMessage = "收到，现在价格是 " + currentPrice + " ，当价格跌到 " + tickPrice + " 时会打电话给你哟！";
 			scheduledTask("below");
-		}else if (tickPrice > currentPrice) {
+		} else if (tickPrice > currentPrice) {
 			returnMessage = "收到，现在价格是 " + currentPrice + " ，当价格涨到 " + tickPrice + " 时会打电话给你哟！";
 			scheduledTask("above");
-		}else {
+		} else {
 			returnMessage = "Cannot get price data!";
 		}
-		
+
 		return returnMessage;
 	}
 
 	public void scheduledTask(String flag) {
-		//2. 再间隔5秒循环获取最新价格，然后触发ITFTT
-		System.out.println("flag:"+flag);
+		// 2. 再间隔5秒循环获取最新价格，然后触发ITFTT
+		System.out.println("flag:" + flag);
+		ScheduledExecutorService service1 = Executors.newSingleThreadScheduledExecutor();
 		if (flag.equals("below")) {
-			//设置查询跌价的定时任务
+			// 设置查询跌价的定时任务
 			Runnable runnable = new Runnable() {
 				public void run() {
 					float tickPrice = Float.parseFloat(Price);
@@ -90,13 +94,18 @@ public class Ticker {
 					}
 					if (currentPrice < tickPrice) {
 						triggerIFTTT("below", String.valueOf(tickPrice));
+						// System.out.println("triggerIFTTT(\"below\", String.valueOf(tickPrice));");
+						// shutdown the scheduled task
+						service1.shutdownNow();
 					}
 				}
 			};
-			ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
-			service.scheduleAtFixedRate(runnable, 0, 5, TimeUnit.SECONDS);
-		}else if(flag.equals("above")) {
-			//设置查询涨价的定时任务
+
+			service1.scheduleAtFixedRate(runnable, 0, 5, TimeUnit.SECONDS);
+
+		} else if (flag.equals("above")) {
+			ScheduledExecutorService service2 = Executors.newSingleThreadScheduledExecutor();
+			// 设置查询涨价的定时任务
 			Runnable runnable = new Runnable() {
 				public void run() {
 					float tickPrice = Float.parseFloat(Price);
@@ -108,13 +117,15 @@ public class Ticker {
 						e.printStackTrace();
 					}
 					if (currentPrice > tickPrice) {
+						// System.out.println("triggerIFTTT(\"below\", String.valueOf(tickPrice));");
 						triggerIFTTT("above", String.valueOf(tickPrice));
-					} 
+						service2.shutdownNow();
+					}
 				}
 			};
-			ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
-			service.scheduleAtFixedRate(runnable, 0, 5, TimeUnit.SECONDS);
-			
+
+			service2.scheduleAtFixedRate(runnable, 0, 5, TimeUnit.SECONDS);
+
 		}
 	}
 
@@ -134,14 +145,10 @@ public class Ticker {
 				response.close();
 				httpClient.close();
 			}
-			
+
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
-	public static void main(String[] args) {
-		new Ticker("1000").triggerIFTTT("above", "1200");
-		
-		
-	}
+
 }
