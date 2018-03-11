@@ -1,4 +1,4 @@
-package com.kyawn.googlecse.main;
+package com.kyawn.bitcointicker.main;
 
 import java.io.BufferedReader;
 import java.io.IOException;
