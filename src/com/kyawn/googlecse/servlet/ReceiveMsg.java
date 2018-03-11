@@ -1,9 +1,14 @@
 package com.kyawn.googlecse.servlet;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
@@ -19,6 +24,7 @@ import org.dom4j.Document;
 import org.dom4j.Element;
 import org.dom4j.io.SAXReader;
 
+import com.kyawn.googlecse.db.DB;
 import com.kyawn.googlecse.entity.TextMsg;
 import com.kyawn.googlecse.main.Ticker;
 import com.kyawn.googlecse.utils.SHA1;
@@ -37,6 +43,7 @@ public class ReceiveMsg extends HttpServlet {
 	 */
 	public ReceiveMsg() {
 		super();
+
 	}
 
 	/**
@@ -92,12 +99,62 @@ public class ReceiveMsg extends HttpServlet {
 		request.setCharacterEncoding("UTF-8");
 		response.setContentType("html/text;charset=utf-8");
 		response.setCharacterEncoding("UTF-8");
-
+		Connection connection = null;
+		try {
+			Class.forName("org.sqlite.JDBC");
+			String dbPath = getServletContext().getRealPath("/")+"\\WEB-INF\\userurl.db";
+			File file = new File(dbPath);
+			file.getPath();
+			System.out.println("DB　PATH："+dbPath);
+			//connection = DriverManager.getConnection("jdbc:slite:"+dbPath);
+			connection = DriverManager.getConnection("jdbc:sqlite:F:\\sanese-master\\WebContent\\WEB-INF\\userurl.db");//要写绝对路径
+			System.out.println("connection:"+connection);
+		} catch (ClassNotFoundException e1) {
+			e1.printStackTrace();
+		} catch (SQLException e2) {
+		}
+		DB db = new DB();
 		String msg = null;
 		try {
 			ReceivedMsgMap = parseXml(request);
-			Ticker ticker = new Ticker(ReceivedMsgMap.get("Content"));
-			msg = ticker.returnMsg();
+			System.out.println("received msg : " + ReceivedMsgMap.toString());
+			if (ReceivedMsgMap.get("MsgType").equals("event")) {
+				if (ReceivedMsgMap.get("Event").equals("subscribe")) {
+					System.out.println("又有新用户订阅啦！");
+					msg = "你好！欢迎你的到来！请告诉我你的IFTTT Webhook 地址。";
+				}
+			} else if (ReceivedMsgMap.get("MsgType").equals("text")) {
+				if (Pattern.compile("^[-\\+]?[\\d]*$").matcher(ReceivedMsgMap.get("Content")).matches()) {
+					// 如果是数字
+					if (db.queryUrl(connection, ReceivedMsgMap.get("FromUserName")) == null) {
+						msg = "IFTTT Webhook地址未成功初始化，请重新输入。";
+					} else {
+						Ticker ticker = new Ticker(ReceivedMsgMap.get("Content"),
+								db.queryUrl(connection, ReceivedMsgMap.get("FromUserName")));
+						msg = ticker.returnMsg();
+						System.out.println("收到价格");
+					}
+				} else if (ReceivedMsgMap.get("Content").startsWith("http")) {
+					// 如果是链接，即IFTTT链接，与用户openid做绑定 fromusername
+					System.out.println("收到IFTTT链接地址");
+					if (db.queryUrl(connection, ReceivedMsgMap.get("FromUserName")) == null) {
+						db.insert(connection, ReceivedMsgMap.get("FromUserName"), ReceivedMsgMap.get("Content"));
+						msg = "IFTTT Webhook URL初始化完成，请发送你要订阅的价格。";
+					}else {
+						db.update(connection, ReceivedMsgMap.get("FromUserName"), ReceivedMsgMap.get("Content"));
+						msg = "IFTTT Webhook URL更新成功，请发送你要订阅的价格。";
+					}
+					
+
+				} else {
+					msg = "收到！我会及时回复的！";
+					System.out.println("收到其他的信息");
+				}
+			} else {
+				msg = "收到！我会及时回复的！";
+				System.out.println("收到其他的信息");
+			}
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

@@ -23,14 +23,14 @@ import org.json.JSONObject;
 
 public class Ticker {
 	private String Price;
-
-	public Ticker(String price) {
-		super();
-		Price = price;
-	}
-
 	public void setPrice(String price) {
 		Price = price;
+	}
+	private String IFTTTUrl = null;
+	public Ticker(String price, String iFTTTUrl) {
+		super();
+		Price = price;
+		IFTTTUrl = iFTTTUrl;
 	}
 
 	public static float getPrice() throws Exception {
@@ -86,7 +86,7 @@ public class Ticker {
 				public void run() {
 					float tickPrice = Float.parseFloat(Price);
 					float currentPrice = 0;
-					System.out.println("開始跑below");
+					System.out.println("running below method");
 					try {
 						currentPrice = Ticker.getPrice();
 					} catch (Exception e) {
@@ -110,7 +110,7 @@ public class Ticker {
 				public void run() {
 					float tickPrice = Float.parseFloat(Price);
 					float currentPrice = 0;
-					System.out.println("開始跑above");
+					System.out.println("running above method");
 					try {
 						currentPrice = Ticker.getPrice();
 					} catch (Exception e) {
@@ -130,25 +130,27 @@ public class Ticker {
 	}
 
 	public void triggerIFTTT(String flag, String tickPrice) {
-		String url = "https://maker.ifttt.com/trigger/bitcoin/with/key/by5FQ4gUJMMJTph9lO5gMc";
+		//String url = "https://maker.ifttt.com/trigger/bitcoin/with/key/by5FQ4gUJMMJTph9lO5gMc";
 		String json = "{\"value1\":\"" + flag + "\",\"value2\":\"" + tickPrice + "\"}";
 		CloseableHttpClient httpClient = HttpClients.createDefault();
-		HttpPost httpPost = new HttpPost(url);
-		httpPost.addHeader("Content-Type", "application/json");
-		CloseableHttpResponse response = null;
-		try {
-			httpPost.setEntity(new StringEntity(json));
-			response = httpClient.execute(httpPost);
-			HttpEntity entity = response.getEntity();
-			String responseContent = EntityUtils.toString(entity, "UTF-8");
-			if (responseContent != null) {
-				response.close();
-				httpClient.close();
+		if (IFTTTUrl == null) {
+			System.out.println("URL is NULL!!");
+		}else {
+			HttpPost httpPost = new HttpPost(IFTTTUrl);
+			httpPost.addHeader("Content-Type", "application/json");
+			CloseableHttpResponse response = null;
+			try {
+				httpPost.setEntity(new StringEntity(json));
+				response = httpClient.execute(httpPost);
+				HttpEntity entity = response.getEntity();
+				String responseContent = EntityUtils.toString(entity, "UTF-8");
+				if (responseContent != null) {
+					response.close();
+					httpClient.close();
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
-
-		} catch (IOException e) {
-			e.printStackTrace();
 		}
-	}
-
+		}
 }
