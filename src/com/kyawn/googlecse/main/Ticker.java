@@ -23,10 +23,13 @@ import org.json.JSONObject;
 
 public class Ticker {
 	private String Price;
+
 	public void setPrice(String price) {
 		Price = price;
 	}
+
 	private String IFTTTUrl = null;
+
 	public Ticker(String price, String iFTTTUrl) {
 		super();
 		Price = price;
@@ -130,12 +133,13 @@ public class Ticker {
 	}
 
 	public void triggerIFTTT(String flag, String tickPrice) {
-		//String url = "https://maker.ifttt.com/trigger/bitcoin/with/key/by5FQ4gUJMMJTph9lO5gMc";
+		// String url =
+		// "https://maker.ifttt.com/trigger/bitcoin/with/key/by5FQ4gUJMMJTph9lO5gMc";
 		String json = "{\"value1\":\"" + flag + "\",\"value2\":\"" + tickPrice + "\"}";
 		CloseableHttpClient httpClient = HttpClients.createDefault();
 		if (IFTTTUrl == null) {
 			System.out.println("URL is NULL!!");
-		}else {
+		} else {
 			HttpPost httpPost = new HttpPost(IFTTTUrl);
 			httpPost.addHeader("Content-Type", "application/json");
 			CloseableHttpResponse response = null;
@@ -152,5 +156,9 @@ public class Ticker {
 				e.printStackTrace();
 			}
 		}
-		}
+	}
+//	public static void main(String[] args) {
+//		Ticker ticker = new Ticker("10000", "https://maker.ifttt.com/trigger/bitcointicker/with/key/2Ym5J99waKt5lDwSoIbi_");
+//		ticker.triggerIFTTT("below", "10000");
+//	}
 }
